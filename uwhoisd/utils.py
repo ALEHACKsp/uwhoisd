@@ -4,9 +4,18 @@ Utilities.
 
 import collections
 import contextlib
-import ConfigParser
+import codecs
+try:
+    import configparser
+except ImportError:
+    # Python 2
+    import ConfigParser as configparser
 import re
-import StringIO
+try:
+    import io
+except ImportError:
+    # Python 2
+    import StringIO as io
 import time
 
 
@@ -19,9 +28,9 @@ def make_config_parser(defaults=None, config_path=None):
     """
     Creates a config parser.
     """
-    parser = ConfigParser.SafeConfigParser()
+    parser = configparser.SafeConfigParser()
     if defaults is not None:
-        with contextlib.closing(StringIO.StringIO(defaults)) as fp:
+        with contextlib.closing(io.StringIO(defaults)) as fp:
             parser.readfp(fp)
     if config_path is not None:
         parser.read(config_path)
@@ -88,7 +97,7 @@ def decode_value(s):
         if s[0] != s[-1]:
             raise ValueError(
                 "The trailing quote be present and match the leading quote.")
-        return s[1:-1].decode('string_escape')
+        return codecs.getdecoder("unicode_escape")(s[1:-1])[0]
     return s
 
 

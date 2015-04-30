@@ -153,7 +153,7 @@ def main():
     Execute the daemon.
     """
     if len(sys.argv) != 2:
-        print >> sys.stderr, USAGE % os.path.basename(sys.argv[0])
+        print(USAGE % os.path.basename(sys.argv[0]), file=sys.stderr)
         return 1
 
     logging.config.fileConfig(sys.argv[1])
@@ -188,8 +188,8 @@ def main():
         else:
             logger.info("Caching deactivated")
             whois = uwhois.whois
-    except Exception, ex:  # pylint: disable-msg=W0703
-        print >> sys.stderr, "Could not parse config file: %s" % str(ex)
+    except Exception as ex:  # pylint: disable-msg=W0703
+        print("Could not parse config file: %s" % str(ex), file=sys.stderr)
         return 1
 
     net.start_service(iface, port, whois)

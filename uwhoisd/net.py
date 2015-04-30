@@ -27,14 +27,14 @@ class Timeout(Exception):
         self.server = server
 
 
-class WhoisClient(diesel.Client):
+class WhoisClient(diesel.TCPClient):
     """
     A WHOIS client for diesel.
     """
 
     __slots__ = ()
 
-    @diesel.call
+    @diesel.protocol
     def whois(self, query):
         """
         Perform a query against the server. Either returns the server's
@@ -49,32 +49,32 @@ class WhoisClient(diesel.Client):
                 if evt == 'sleep':
                     raise Timeout(self.addr)
                 result.append(data)
-        except diesel.ConnectionClosed, ex:
+        except diesel.ConnectionClosed as ex:
             if ex.buffer:
                 result.append(ex.buffer)
         return ''.join(result)
 
 
-def respond(whois, addr):
+def respond(whois, service, addr):
     """
     Respond to a single request.
     """
-    query = diesel.until_eol().rstrip(CRLF).lower()
-    if not utils.is_well_formed_fqdn(query):
+    query = diesel.until_eol().decode('ascii').rstrip(CRLF).lower()
+    if not utils.is_well_formed_fqdn(query.encode('ascii')):
         diesel.send("; Bad request: '%s'\r\n" % query)
         return
 
     try:
         diesel.send(whois(query))
-    except diesel.ClientConnectionError:
-        logger.info("Connection refused")
-        diesel.send("; Connection refused by downstream server\r\n")
-    except diesel.ConnectionClosed:
-        logger.info("Connection closed by %s", addr)
-    except Timeout, ex:
+    #except diesel.TCPClientConnectionError:
+    #    logger.info("Connection refused")
+    #    diesel.send("; Connection refused by downstream server\r\n")
+    #except diesel.TCPConnectionClosed:
+    #    logger.info("Connection closed by %s", addr)
+    except Timeout as ex:
         logger.info("Slow response")
         diesel.send("; Slow response from %s.\r\n" % ex.server)
-    except diesel.DNSResolutionError, ex:
+    except diesel.DNSResolutionError as ex:
         logger.error("%s", ex.message)
         diesel.send("; %s\n\n" % ex.message)
 
@@ -84,4 +84,4 @@ def start_service(iface, port, whois):
     Start the service.
     """
     diesel.quickstart(
-        diesel.Service(functools.partial(respond, whois), port, iface))
+        diesel.TCPService(functools.partial(respond, whois), port, iface))
